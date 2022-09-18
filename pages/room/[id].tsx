@@ -2,6 +2,7 @@ import io from "socket.io-client";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/router";
+import useUser from "@libs/client/useUser";
 
 let socket;
 let roomName: number;
@@ -13,8 +14,9 @@ type Message = {
 
 export default function Room() {
   const router = useRouter();
-  const username = "정우";
-  const me = "류정우";
+  const { user } = useUser();
+  const username = user?.name;
+  const me = user?.name;
   const { register, handleSubmit, reset } = useForm<Message>();
   const [messages, setMessages] = useState<Array<Message>>([]);
 

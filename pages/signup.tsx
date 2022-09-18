@@ -5,6 +5,8 @@ import Button from "@components/button";
 import Input from "@components/input";
 import { cls } from "@libs/client/utils";
 import { useRouter } from "next/router";
+import useMutation from "@libs/client/useMutation";
+import useUser from "@libs/client/useUser";
 
 interface EnterForm {
   email: string;
@@ -20,12 +22,23 @@ interface MutationResult {
 }
 
 const Enter: NextPage = () => {
-  const { register, reset, handleSubmit } = useForm<EnterForm>();
-  const { register: tokenRegister, handleSubmit: tokenHandleSubmit } =
-    useForm<TokenForm>();
-  const [method, setMethod] = useState<"email">("email");
-  const onValid = (validForm: EnterForm) => {};
+  const { user } = useUser();
   const router = useRouter();
+  const { register, reset, handleSubmit } = useForm<EnterForm>();
+  const [signup, { loading, data }] = useMutation(`/api/user/signup`);
+  const [method, setMethod] = useState<"email">("email");
+  const onValid = (formData: EnterForm) => {
+    if (loading) return;
+    signup(formData);
+  };
+  useEffect(() => {
+    if (data && data?.ok) {
+      router.push("/enter");
+    }
+    if (user) {
+      router.push("/");
+    }
+  }, [data, router, user]);
   return (
     <div className="flex justify-center h-screen">
       <div className="mt-16 px-4 w-11/12 max-w-xl">
@@ -34,9 +47,6 @@ const Enter: NextPage = () => {
           {false ? (
             <form className="mt-8 flex flex-col space-y-4">
               <Input
-                register={tokenRegister("token", {
-                  required: true,
-                })}
                 name="token"
                 label="Confirmation Token"
                 type="number"
@@ -72,6 +82,7 @@ const Enter: NextPage = () => {
                   label="Email address"
                   type="email"
                   required
+                  onChange={() => (data.error = "")}
                 />
                 <Input
                   register={register("password", {
@@ -82,7 +93,14 @@ const Enter: NextPage = () => {
                   type="password"
                   required
                 />
-                <Button text={"Get login link"} />
+                {data?.error ? (
+                  <span className="text-center font-semibold text-red-500">
+                    {data?.error}
+                  </span>
+                ) : (
+                  ""
+                )}
+                <Button loading={loading} text={"Get login link"} />
               </form>
             </>
           )}

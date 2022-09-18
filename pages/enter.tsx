@@ -6,14 +6,12 @@ import Input from "@components/input";
 // import useMutation from "@libs/client/useMutation";
 import { cls } from "@libs/client/utils";
 import { useRouter } from "next/router";
+import useUser from "@libs/client/useUser";
+import useMutation from "@libs/client/useMutation";
 
 interface EnterForm {
   email: string;
   password: string;
-}
-
-interface TokenForm {
-  token: string;
 }
 
 interface MutationResult {
@@ -21,14 +19,20 @@ interface MutationResult {
 }
 
 const Enter: NextPage = () => {
-  const { register, reset, handleSubmit } = useForm<EnterForm>();
-  const { register: tokenRegister, handleSubmit: tokenHandleSubmit } =
-    useForm<TokenForm>();
-  const [method, setMethod] = useState<"email">("email");
+  const { user } = useUser();
   const router = useRouter();
-  const onValid = (data: EnterForm) => {
-    console.log(data);
+  const [login, { loading, data }] = useMutation(`/api/user/login`);
+  const { register, reset, handleSubmit } = useForm<EnterForm>();
+  const [method, setMethod] = useState<"email">("email");
+  const onValid = (formData: EnterForm) => {
+    if (loading) return;
+    login(formData);
   };
+  useEffect(() => {
+    if ((data && data?.ok) || user) {
+      router.push("/");
+    }
+  }, [data, router, user]);
   return (
     <div className="flex justify-center h-screen">
       <div className="mt-16 px-4 w-11/12 max-w-xl">
@@ -70,7 +74,14 @@ const Enter: NextPage = () => {
               type="password"
               required
             />
-            <Button text={"Login"} />
+            {data?.error ? (
+              <span className="text-center font-semibold text-red-500">
+                {data?.error}
+              </span>
+            ) : (
+              ""
+            )}
+            <Button loading={loading} text={"Login"} />
           </form>
 
           <div className="mt-8">
