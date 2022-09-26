@@ -3,9 +3,11 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/router";
 import useUser from "@libs/client/useUser";
+import { cls } from "@libs/client/utils";
 
 let socket;
-let roomName: number;
+let roomName: string = "";
+const isMe = "YOU";
 
 type Message = {
   author: string;
@@ -15,38 +17,60 @@ type Message = {
 export default function Room() {
   const router = useRouter();
   const { user } = useUser();
-  const username = user?.name;
-  const me = user?.name;
+  const [username, setUsername] = useState("");
   const { register, handleSubmit, reset } = useForm<Message>();
   const [messages, setMessages] = useState<Array<Message>>([]);
-
+  const done = (msg) => {};
   useEffect(() => {
     if (!router.isReady) return;
-    roomName = +router.query.id.toString();
+    roomName = router.query.id.toString();
+    if (!user) return;
+    setUsername(user?.name);
+  }, [router.isReady, user]);
+  useEffect(() => {
+    if (!roomName || !username) return;
     socketInitializer();
-  }, [router.isReady, router.query.id]);
-
+  }, [roomName, username]);
   const socketInitializer = async () => {
     // We just call it because we don't need anything else out of it
     await fetch("/api/socket");
 
     socket = io();
-    socket.on("newIncomingMessage", (msg) => {
+
+    socket.emit("nickname", username);
+
+    socket.emit("enter_room", { roomName }, done);
+
+    socket.on("welcome", (joinUsername) => {
       setMessages((currentMsg) => [
         ...currentMsg,
-        { author: msg.author, message: msg.message },
+        { author: "SYSTEM", message: `${joinUsername} joined!` },
+      ]);
+    });
+
+    socket.on("bye", (leftUsername) => {
+      setMessages((currentMsg) => [
+        ...currentMsg,
+        { author: "SYSTEM", message: `${leftUsername} left ㅠㅠ` },
+      ]);
+    });
+
+    socket.on("new_Message", (msg, name) => {
+      setMessages((currentMsg) => [
+        ...currentMsg,
+        { author: name, message: msg },
       ]);
     });
   };
-
   const onValid = ({ message }) => {
-    socket.emit("createdMessage", { author: username, message, roomName });
-    setMessages((currentMsg) => [...currentMsg, { author: me, message }]);
+    socket.emit("createdMessage", { message, roomName });
+    setMessages((currentMsg) => [...currentMsg, { author: isMe, message }]);
     reset();
   };
   return (
     <div className="flex items-center p-4 mx-auto min-h-screen justify-center bg-purple-500">
       <main className="gap-4 flex flex-col items-center justify-center w-full h-full">
+        <p className="font-bold text-white text-xl">Room: {roomName}</p>
         <p className="font-bold text-white text-xl">
           Your username: {username}
         </p>
@@ -55,7 +79,10 @@ export default function Room() {
             {messages.map((msg, i) => {
               return (
                 <div
-                  className="w-full py-1 px-2 border-b border-gray-200"
+                  className={cls(
+                    "w-full py-1 px-2 border-b border-gray-200",
+                    msg.author === "SYSTEM" ? "text-red-500" : ""
+                  )}
                   key={i}
                 >
                   {msg.author} : {msg.message}

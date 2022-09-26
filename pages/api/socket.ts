@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import messageHandler from "../../utils/sockets/messageHandler";
+import socketHandler from "@libs/sockets/socketHandler";
 
 export default function SocketHandler(req, res) {
   // It means that socket server was already initialised
@@ -13,7 +13,7 @@ export default function SocketHandler(req, res) {
   res.socket.server.io = io;
 
   const onConnection = (socket) => {
-    messageHandler(io, socket);
+    socketHandler(io, socket);
   };
 
   // Define actions inside
