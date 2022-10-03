@@ -1,5 +1,5 @@
 import io from "socket.io-client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/router";
 import useUser from "@libs/client/useUser";
@@ -7,7 +7,7 @@ import { cls } from "@libs/client/utils";
 
 let socket;
 let roomName: string = "";
-const isMe = "YOU";
+let myStream;
 
 type Message = {
   author: string;
@@ -15,11 +15,18 @@ type Message = {
 };
 
 export default function Room() {
-  const router = useRouter();
   const { user } = useUser();
-  const [username, setUsername] = useState("");
+  const router = useRouter();
+
+  // For Chat
   const { register, handleSubmit, reset } = useForm<Message>();
+  const [username, setUsername] = useState("");
   const [messages, setMessages] = useState<Array<Message>>([]);
+
+  // For video
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [cameraOptions, setCameraOptions] = useState([]);
+  const [toggleVideo, setToggleVideo] = useState(true);
   const done = (msg) => {};
   useEffect(() => {
     if (!router.isReady) return;
@@ -31,6 +38,9 @@ export default function Room() {
     if (!roomName || !username) return;
     socketInitializer();
   }, [roomName, username]);
+  useEffect(() => {
+    getMedia();
+  }, []);
   const socketInitializer = async () => {
     // We just call it because we don't need anything else out of it
     await fetch("/api/socket");
@@ -64,9 +74,42 @@ export default function Room() {
   };
   const onValid = ({ message }) => {
     socket.emit("createdMessage", { message, roomName });
-    setMessages((currentMsg) => [...currentMsg, { author: isMe, message }]);
+    setMessages((currentMsg) => [...currentMsg, { author: "Me", message }]);
     reset();
   };
+  const getCameras = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter((device) => device.kind === "videoinput");
+      cameras.map((camera) => {
+        setCameraOptions([
+          ...cameraOptions,
+          { value: camera.deviceId, innerText: camera.label },
+        ]);
+      });
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  const getMedia = async () => {
+    try {
+      myStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: true,
+      });
+      videoRef.current.srcObject = myStream;
+      await getCameras();
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  const videoControl = () => {
+    setToggleVideo(!toggleVideo);
+    myStream
+      .getVideoTracks()
+      .forEach((track) => (track.enabled = !track.enabled));
+  };
+  const cameraChange = async (value) => {};
   return (
     <div className="flex items-center p-4 mx-auto min-h-screen justify-center bg-purple-500">
       <main className="gap-4 flex flex-col items-center justify-center w-full h-full">
@@ -106,6 +149,31 @@ export default function Room() {
               </button>
             </div>
           </form>
+        </div>
+        <div>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="w-56 bg-slate-500"
+          ></video>
+          <select onChange={cameraChange}>
+            {cameraOptions ? (
+              cameraOptions.map((camera, i) => (
+                <option key={i} value={camera.value}>
+                  {camera.innerText}
+                </option>
+              ))
+            ) : (
+              <option value="None">No Camera</option>
+            )}
+          </select>
+          <button
+            onClick={videoControl}
+            className="p-2 border-white border-2 rounded-xl cursor-pointer hover:scale-110 mt-3"
+          >
+            {toggleVideo ? "Turn off" : "Turn on"}
+          </button>
         </div>
       </main>
     </div>

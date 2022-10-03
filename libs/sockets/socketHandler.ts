@@ -20,8 +20,7 @@ const socketHandler = (io, socket) => {
   socket.on("nickname", (nickname: string) => {
     socket["nickname"] = nickname;
   });
-  // console.log(socket["nickname"]);
-  // console.log(socket.nickname);
+
   socket.on("enter_room", ({ roomName }, done) => {
     socket.join(roomName);
     console.log(socket.rooms);
@@ -35,7 +34,7 @@ const socketHandler = (io, socket) => {
   });
 
   socket.on("createdMessage", ({ message, roomName }) => {
-    socket.broadcast.emit("new_Message", message, socket.nickname);
+    socket.to(roomName).emit("new_Message", message, socket.nickname);
   });
 };
 
