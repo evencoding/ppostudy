@@ -36,6 +36,10 @@ const socketHandler = (io, socket) => {
   socket.on("createdMessage", ({ message, roomName }) => {
     socket.to(roomName).emit("new_Message", message, socket.nickname);
   });
+
+  socket.on("offer", (offer, roomName) => {
+    socket.to(roomName).emit("offer", offer);
+  });
 };
 
 export default socketHandler;

@@ -8,6 +8,7 @@ import { cls } from "@libs/client/utils";
 let socket;
 let roomName: string = "";
 let myStream;
+let myPeerConnection;
 
 type Message = {
   author: string;
@@ -41,8 +42,14 @@ export default function Room() {
   useEffect(() => {
     getMedia();
   }, []);
+  const makeConnection = () => {
+    // Make a Peer-to-Peer Connection
+    myPeerConnection = new RTCPeerConnection();
+    myStream
+      .getTracks()
+      .forEach((track) => myPeerConnection.addTrack(track, myStream));
+  };
   const socketInitializer = async () => {
-    // We just call it because we don't need anything else out of it
     await fetch("/api/socket");
 
     socket = io();
@@ -51,11 +58,21 @@ export default function Room() {
 
     socket.emit("enter_room", { roomName }, done);
 
-    socket.on("welcome", (joinUsername) => {
+    // Running Peer A
+    socket.on("welcome", async (joinUsername) => {
+      const offer = await myPeerConnection.createOffer();
+      myPeerConnection.setLocalDescription(offer);
+      socket.emit("offer", offer, roomName);
+      console.log("sent the offer");
       setMessages((currentMsg) => [
         ...currentMsg,
         { author: "SYSTEM", message: `${joinUsername} joined!` },
       ]);
+    });
+
+    // Running Peer B
+    socket.on("offer", (offer) => {
+      console.log(offer);
     });
 
     socket.on("bye", (leftUsername) => {
@@ -99,6 +116,7 @@ export default function Room() {
       });
       videoRef.current.srcObject = myStream;
       await getCameras();
+      makeConnection();
     } catch (e) {
       console.log(e);
     }
