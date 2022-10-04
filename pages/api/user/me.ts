@@ -8,6 +8,11 @@ async function handler(
   res: NextApiResponse<ResponseType>
 ) {
   if (req.method === "GET") {
+    if (!req?.session?.user?.id) {
+      return res.json({
+        ok: false,
+      });
+    }
     const profile = await client.user.findUnique({
       where: { id: req.session.user?.id },
     });

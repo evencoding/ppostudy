@@ -29,10 +29,10 @@ const Enter: NextPage = () => {
     login(formData);
   };
   useEffect(() => {
-    if ((data && data?.ok) || user) {
+    if (data?.ok) {
       router.push("/");
     }
-  }, [data, router, user]);
+  }, [router, data]);
   return (
     <div className="flex justify-center h-screen">
       <div className="mt-16 px-4 w-11/12 max-w-xl">

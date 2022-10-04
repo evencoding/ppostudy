@@ -23,22 +23,19 @@ interface MutationResult {
 
 const Enter: NextPage = () => {
   const { user } = useUser();
-  const router = useRouter();
   const { register, reset, handleSubmit } = useForm<EnterForm>();
   const [signup, { loading, data }] = useMutation(`/api/user/signup`);
   const [method, setMethod] = useState<"email">("email");
+  const router = useRouter();
   const onValid = (formData: EnterForm) => {
     if (loading) return;
     signup(formData);
   };
   useEffect(() => {
-    if (data && data?.ok) {
+    if (data?.ok) {
       router.push("/enter");
     }
-    if (user) {
-      router.push("/");
-    }
-  }, [data, router, user]);
+  }, [data, router]);
   return (
     <div className="flex justify-center h-screen">
       <div className="mt-16 px-4 w-11/12 max-w-xl">

@@ -3,9 +3,24 @@ import Head from "next/head";
 import { AppProps } from "next/app";
 import { SWRConfig } from "swr";
 import useUser from "@libs/client/useUser";
+import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 function MyApp({ Component, pageProps }: AppProps) {
-  useUser();
+  const { user } = useUser();
+  const router = useRouter();
+  useEffect(() => {
+    if (!user) return;
+    if (router.pathname === "/enter" || router.pathname === "/signup") {
+      if (user) {
+        router.push("/");
+      }
+    } else {
+      if (!user) {
+        router.push("/enter");
+      }
+    }
+  }, [user]);
   return (
     <>
       <Head>
