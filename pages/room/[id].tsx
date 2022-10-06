@@ -59,10 +59,10 @@ export default function Room() {
     socket.emit("enter_room", { roomName }, done);
 
     // Running Peer A
-    socket.on("welcome", async (joinUsername) => {
+    socket.on("welcome", async (joinUsername, done) => {
       const offer = await myPeerConnection.createOffer();
-      myPeerConnection.setLocalDescription(offer);
-      socket.emit("offer", offer, roomName);
+      await myPeerConnection.setLocalDescription(offer);
+      await socket.emit("offer", offer, roomName);
       console.log("sent the offer");
       setMessages((currentMsg) => [
         ...currentMsg,
@@ -71,8 +71,16 @@ export default function Room() {
     });
 
     // Running Peer B
-    socket.on("offer", (offer) => {
-      console.log(offer);
+    socket.on("offer", async (offer) => {
+      myPeerConnection.setRemoteDescription(offer);
+      const answer = await myPeerConnection.createAnswer();
+      myPeerConnection.setLocalDescription(answer);
+      socket.emit("answer", answer, roomName);
+    });
+
+    // Running Peer A
+    socket.on("answer", (answer) => {
+      myPeerConnection.setRemoteDescription(answer);
     });
 
     socket.on("bye", (leftUsername) => {
