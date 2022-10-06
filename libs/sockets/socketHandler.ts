@@ -35,6 +35,10 @@ const socketHandler = (io, socket) => {
     socket.to(roomName).emit("answer", answer);
   });
 
+  socket.on("ice", (ice, roomName) => {
+    socket.to(roomName).emit("ice", ice);
+  });
+
   socket.on("disconnecting", () => {
     socket.rooms.forEach((roomName) =>
       socket.to(roomName).emit("bye", socket.nickname)

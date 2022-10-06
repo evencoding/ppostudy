@@ -26,6 +26,7 @@ export default function Room() {
 
   // For video
   const videoRef = useRef<HTMLVideoElement>(null);
+  const peersVideoRef = useRef<HTMLVideoElement>(null);
   const [cameraOptions, setCameraOptions] = useState([]);
   const [toggleVideo, setToggleVideo] = useState(true);
   const done = (msg) => {};
@@ -45,6 +46,16 @@ export default function Room() {
   const makeConnection = () => {
     // Make a Peer-to-Peer Connection
     myPeerConnection = new RTCPeerConnection();
+    myPeerConnection.addEventListener("icecandidate", (data) => {
+      console.log("sent candidate");
+      socket.emit("ice", data?.candidate, roomName);
+    });
+    myPeerConnection.addEventListener("track", (data) => {
+      console.log("got an event from my peer");
+      console.log("Peer's Stream", data?.streams[0]);
+      console.log("My", myStream);
+      peersVideoRef.current.srcObject = data?.streams[0];
+    });
     myStream
       .getTracks()
       .forEach((track) => myPeerConnection.addTrack(track, myStream));
@@ -73,14 +84,22 @@ export default function Room() {
     // Running Peer B
     socket.on("offer", async (offer) => {
       myPeerConnection.setRemoteDescription(offer);
+      console.log("received the offer");
       const answer = await myPeerConnection.createAnswer();
       myPeerConnection.setLocalDescription(answer);
       socket.emit("answer", answer, roomName);
+      console.log("sent the answer");
     });
 
     // Running Peer A
     socket.on("answer", (answer) => {
+      console.log("received the answer");
       myPeerConnection.setRemoteDescription(answer);
+    });
+
+    socket.on("ice", (ice) => {
+      console.log("received candidate");
+      myPeerConnection.addIceCandidate(ice);
     });
 
     socket.on("bye", (leftUsername) => {
@@ -179,6 +198,12 @@ export default function Room() {
         <div>
           <video
             ref={videoRef}
+            autoPlay
+            playsInline
+            className="w-56 bg-slate-500"
+          ></video>
+          <video
+            ref={peersVideoRef}
             autoPlay
             playsInline
             className="w-56 bg-slate-500"
