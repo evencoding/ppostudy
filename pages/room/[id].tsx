@@ -45,15 +45,23 @@ export default function Room() {
   }, []);
   const makeConnection = () => {
     // Make a Peer-to-Peer Connection
-    myPeerConnection = new RTCPeerConnection();
+    myPeerConnection = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: [
+            "stun:stun.1.google.com:19302",
+            "stun:stun1.1.google.com:19302",
+            "stun:stun2.1.google.com:19302",
+            "stun:stun3.1.google.com:19302",
+            "stun:stun4.1.google.com:19302",
+          ],
+        },
+      ],
+    });
     myPeerConnection.addEventListener("icecandidate", (data) => {
-      console.log("sent candidate");
       socket.emit("ice", data?.candidate, roomName);
     });
     myPeerConnection.addEventListener("track", (data) => {
-      console.log("got an event from my peer");
-      console.log("Peer's Stream", data?.streams[0]);
-      console.log("My", myStream);
       peersVideoRef.current.srcObject = data?.streams[0];
     });
     myStream
@@ -74,7 +82,6 @@ export default function Room() {
       const offer = await myPeerConnection.createOffer();
       await myPeerConnection.setLocalDescription(offer);
       await socket.emit("offer", offer, roomName);
-      console.log("sent the offer");
       setMessages((currentMsg) => [
         ...currentMsg,
         { author: "SYSTEM", message: `${joinUsername} joined!` },
@@ -84,21 +91,17 @@ export default function Room() {
     // Running Peer B
     socket.on("offer", async (offer) => {
       myPeerConnection.setRemoteDescription(offer);
-      console.log("received the offer");
       const answer = await myPeerConnection.createAnswer();
       myPeerConnection.setLocalDescription(answer);
       socket.emit("answer", answer, roomName);
-      console.log("sent the answer");
     });
 
     // Running Peer A
     socket.on("answer", (answer) => {
-      console.log("received the answer");
       myPeerConnection.setRemoteDescription(answer);
     });
 
     socket.on("ice", (ice) => {
-      console.log("received candidate");
       myPeerConnection.addIceCandidate(ice);
     });
 
@@ -107,6 +110,7 @@ export default function Room() {
         ...currentMsg,
         { author: "SYSTEM", message: `${leftUsername} left ㅠㅠ` },
       ]);
+      peersVideoRef.current.srcObject = null;
     });
 
     socket.on("new_Message", (msg, name) => {
@@ -131,9 +135,7 @@ export default function Room() {
           { value: camera.deviceId, innerText: camera.label },
         ]);
       });
-    } catch (e) {
-      console.log(e);
-    }
+    } catch (e) {}
   };
   const getMedia = async () => {
     try {
@@ -144,9 +146,7 @@ export default function Room() {
       videoRef.current.srcObject = myStream;
       await getCameras();
       makeConnection();
-    } catch (e) {
-      console.log(e);
-    }
+    } catch (e) {}
   };
   const videoControl = () => {
     setToggleVideo(!toggleVideo);

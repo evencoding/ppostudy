@@ -2,7 +2,6 @@ import { Server } from "socket.io";
 import socketHandler from "@libs/sockets/socketHandler";
 
 export default function SocketHandler(req, res) {
-  // It means that socket server was already initialised
   if (res.socket.server.io) {
     console.log("Already set up");
     res.end();

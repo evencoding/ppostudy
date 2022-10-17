@@ -5,6 +5,7 @@ import { SWRConfig } from "swr";
 import useUser from "@libs/client/useUser";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
+import Script from "next/script";
 
 function MyApp({ Component, pageProps }: AppProps) {
   const { user } = useUser();
@@ -23,6 +24,7 @@ function MyApp({ Component, pageProps }: AppProps) {
   }, [user]);
   return (
     <>
+      <Script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></Script>
       <Head>
         <title>NextJS TailwindCSS TypeScript Starter</title>
         <meta name="viewport" content="initial-scale=1.0, width=device-width" />

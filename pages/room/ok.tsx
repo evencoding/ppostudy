@@ -1,130 +1,69 @@
-import io from "socket.io-client";
-import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/router";
 import useUser from "@libs/client/useUser";
+import { useEffect, useRef } from "react";
+import io from "socket.io-client";
+import Script from "next/script";
 
 let socket;
-let roomName: string = "";
-let myStream;
-let myPeerConnection;
-let myLocal;
-let myRemote;
-let p1Local;
-let p1Remote;
-let p2Local;
-let p2Remote;
-let p3Local;
-let p3Remote;
+let myVideoStream;
+let peer;
+const ROOM_ID = "정우";
 
-export default function Room() {
-  // For video
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const peersVideoRef = useRef<HTMLVideoElement>(null);
-  const [cameraOptions, setCameraOptions] = useState([]);
+export default function Ok() {
+  const { user } = useUser();
+  const myVideoRef = useRef(null);
+  const SERVER_URL = "http://localhost:8000/";
   useEffect(() => {
-    socketInitializer();
-  }, []);
+    if (!user) return;
+    socket = io(SERVER_URL, {
+      transports: ["polling"],
+    });
+    console.log(socket);
+    peer = new Peer({
+      host: "127.0.0.1",
+      port: 8000,
+      path: "/peerjs",
+      config: {
+        iceServers: [
+          { url: "stun:stun01.sipphone.com" },
+          { url: "stun:stun.ekiga.net" },
+          { url: "stun:stunserver.org" },
+          { url: "stun:stun.softjoys.com" },
+          { url: "stun:stun.voiparound.com" },
+          { url: "stun:stun.voipbuster.com" },
+          { url: "stun:stun.voipstunt.com" },
+          { url: "stun:stun.voxgratia.org" },
+          { url: "stun:stun.xten.com" },
+          {
+            url: "turn:192.158.29.39:3478?transport=udp",
+            credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
+            username: "28224511:1379330808",
+          },
+          {
+            url: "turn:192.158.29.39:3478?transport=tcp",
+            credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=",
+            username: "28224511:1379330808",
+          },
+        ],
+      },
+
+      debug: 3,
+    });
+    peer.on("open", (id) => {
+      socket.emit("join-room", ROOM_ID, user?.id, user?.name);
+    });
+  }, [user]);
   useEffect(() => {
-    getMedia();
-  }, []);
-  const makeConnection = () => {
-    // Make a Peer-to-Peer Connection
-    myPeerConnection = new RTCPeerConnection();
-    myPeerConnection.addEventListener("icecandidate", (data) => {
-      console.log("sent candidate");
-      socket.emit("ice", data?.candidate, roomName);
-    });
-    myPeerConnection.addEventListener("track", (data) => {
-      console.log("got an event from my peer");
-      console.log("Peer's Stream", data?.streams[0]);
-      console.log("My", myStream);
-      peersVideoRef.current.srcObject = data?.streams[0];
-    });
-    myStream
-      .getTracks()
-      .forEach((track) => myPeerConnection.addTrack(track, myStream));
-  };
-  const socketInitializer = async () => {
-    await fetch("/api/socket");
-
-    socket = io();
-
-    socket.emit("enter_room", { roomName });
-
-    // Running Peer A
-    socket.on("welcome", async (joinUsername, done) => {
-      const offer = await myPeerConnection.createOffer();
-      await myPeerConnection.setLocalDescription(offer);
-      await socket.emit("offer", offer, roomName);
-      console.log("sent the offer");
-    });
-
-    // Running Peer B
-    socket.on("offer", async (offer) => {
-      myPeerConnection.setRemoteDescription(offer);
-      console.log("received the offer");
-      const answer = await myPeerConnection.createAnswer();
-      myPeerConnection.setLocalDescription(answer);
-      socket.emit("answer", answer, roomName);
-      console.log("sent the answer");
-    });
-
-    // Running Peer A
-    socket.on("answer", (answer) => {
-      console.log("received the answer");
-      myPeerConnection.setRemoteDescription(answer);
-    });
-
-    socket.on("ice", (ice) => {
-      console.log("received candidate");
-      myPeerConnection.addIceCandidate(ice);
-    });
-  };
-  const getCameras = async () => {
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const cameras = devices.filter((device) => device.kind === "videoinput");
-      cameras.map((camera) => {
-        setCameraOptions([
-          ...cameraOptions,
-          { value: camera.deviceId, innerText: camera.label },
-        ]);
-      });
-    } catch (e) {
-      console.log(e);
-    }
-  };
-  const getMedia = async () => {
-    try {
-      myStream = await navigator.mediaDevices.getUserMedia({
+    navigator.mediaDevices
+      .getUserMedia({
         audio: false,
         video: true,
-      });
-      videoRef.current.srcObject = myStream;
-      await getCameras();
-      makeConnection();
-    } catch (e) {
-      console.log(e);
-    }
-  };
+      })
+      .then((stream) => {});
+  }, []);
   return (
-    <div className="flex items-center p-4 mx-auto min-h-screen justify-center bg-purple-500">
-      <main className="gap-4 flex flex-col items-center justify-center w-full h-full">
-        <div>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            className="w-56 bg-slate-500"
-          ></video>
-          <video
-            ref={peersVideoRef}
-            autoPlay
-            playsInline
-            className="w-56 bg-slate-500"
-          ></video>
-        </div>
-      </main>
-    </div>
+    <>
+      <Script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></Script>
+      <div></div>
+    </>
   );
 }
