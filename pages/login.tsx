@@ -1,15 +1,15 @@
-import type { NextPage } from "next";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import Button from "@components/button";
-import Input from "@components/input";
+import type { NextPage } from 'next';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import Button from '@components/button';
+import Input from '@components/input';
 // import useMutation from "@libs/client/useMutation";
-import { cls } from "@libs/client/utils";
-import { useRouter } from "next/router";
-import useUser from "@libs/client/useUser";
-import useMutation from "@libs/client/useMutation";
+import { cls } from '@libs/client/utils';
+import { useRouter } from 'next/router';
+import useUser from '@libs/client/useUser';
+import useMutation from '@libs/client/useMutation';
 
-interface EnterForm {
+interface LoginForm {
   email: string;
   password: string;
 }
@@ -18,34 +18,34 @@ interface MutationResult {
   ok: boolean;
 }
 
-const Enter: NextPage = () => {
+const Login: NextPage = () => {
   const { user } = useUser();
   const router = useRouter();
   const [login, { loading, data }] = useMutation(`/api/user/login`);
-  const { register, reset, handleSubmit } = useForm<EnterForm>();
-  const [method, setMethod] = useState<"email">("email");
-  const onValid = (formData: EnterForm) => {
+  const { register, reset, handleSubmit } = useForm<LoginForm>();
+  const [method, setMethod] = useState<'email'>('email');
+  const onValid = (formData: LoginForm) => {
     if (loading) return;
     login(formData);
   };
   useEffect(() => {
     if (data?.ok) {
-      router.push("/");
+      router.push('/');
     }
   }, [router, data]);
   return (
     <div className="flex justify-center h-screen">
       <div className="mt-16 px-4 w-11/12 max-w-xl">
-        <h3 className="text-center text-3xl font-bold">Enter to PPoStudy</h3>
+        <h3 className="text-center text-3xl font-bold">Login to PPoStudy</h3>
         <div className="mt-12">
           <div className="flex flex-col items-center">
             <div className="mt-8  grid  w-full grid-cols-2 border-b ">
               <button
                 className={cls(
-                  "border-b-2 pb-4 text-sm font-medium",
-                  method === "email"
-                    ? " border-orange-500 text-orange-400"
-                    : "border-transparent text-gray-500 hover:text-gray-400"
+                  'border-b-2 pb-4 text-sm font-medium',
+                  method === 'email'
+                    ? ' border-orange-500 text-orange-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-400'
                 )}
               >
                 Email
@@ -57,7 +57,7 @@ const Enter: NextPage = () => {
             className="mt-8 flex flex-col space-y-4"
           >
             <Input
-              register={register("email", {
+              register={register('email', {
                 required: true,
               })}
               name="email"
@@ -66,7 +66,7 @@ const Enter: NextPage = () => {
               required
             />
             <Input
-              register={register("password", {
+              register={register('password', {
                 required: true,
               })}
               name="password"
@@ -79,9 +79,9 @@ const Enter: NextPage = () => {
                 {data?.error}
               </span>
             ) : (
-              ""
+              ''
             )}
-            <Button loading={loading} text={"Login"} />
+            <Button loading={loading} text={'Login'} />
           </form>
 
           <div className="mt-8">
@@ -125,4 +125,4 @@ const Enter: NextPage = () => {
     </div>
   );
 };
-export default Enter;
+export default Login;

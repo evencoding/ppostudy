@@ -1,12 +1,13 @@
-import io from "socket.io-client";
-import React, { useState, useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
-import { useRouter } from "next/router";
-import useUser from "@libs/client/useUser";
-import { cls } from "@libs/client/utils";
+import io from 'socket.io-client';
+import React, { useState, useEffect, useRef } from 'react';
+import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/router';
+import useUser from '@libs/client/useUser';
+import { cls } from '@libs/client/utils';
+import Timer from '@components/timer';
 
 let socket;
-let roomName: string = "";
+let roomName: string = '';
 let myStream;
 let myPeerConnection;
 
@@ -16,12 +17,28 @@ type Message = {
 };
 
 export default function Room() {
+  const [time, setTime] = useState(0);
+  const startStudy = () => {
+    setTime(3);
+  };
+  useEffect(() => {
+    if (!time) return;
+    setTimeout(() => {
+      setTime((time) => {
+        if (time === 1) {
+          console.log('끝남 !!');
+        }
+        return time - 1;
+      });
+    }, 1000);
+  }, [time]);
+
   const { user } = useUser();
   const router = useRouter();
 
   // For Chat
   const { register, handleSubmit, reset } = useForm<Message>();
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState('');
   const [messages, setMessages] = useState<Array<Message>>([]);
 
   // For video
@@ -49,71 +66,72 @@ export default function Room() {
       iceServers: [
         {
           urls: [
-            "stun:stun.1.google.com:19302",
-            "stun:stun1.1.google.com:19302",
-            "stun:stun2.1.google.com:19302",
-            "stun:stun3.1.google.com:19302",
-            "stun:stun4.1.google.com:19302",
+            'stun:stun.1.google.com:19302',
+            'stun:stun1.1.google.com:19302',
+            'stun:stun2.1.google.com:19302',
+            'stun:stun3.1.google.com:19302',
+            'stun:stun4.1.google.com:19302',
           ],
         },
       ],
     });
-    myPeerConnection.addEventListener("icecandidate", (data) => {
-      socket.emit("ice", data?.candidate, roomName);
+    myPeerConnection.addEventListener('icecandidate', (data) => {
+      socket.emit('ice', data?.candidate, roomName);
     });
-    myPeerConnection.addEventListener("track", (data) => {
+    myPeerConnection.addEventListener('track', (data) => {
       peersVideoRef.current.srcObject = data?.streams[0];
     });
+    console.log(peersVideoRef);
     myStream
       .getTracks()
       .forEach((track) => myPeerConnection.addTrack(track, myStream));
   };
   const socketInitializer = async () => {
-    await fetch("/api/socket");
+    await fetch('/api/socket');
 
     socket = io();
 
-    socket.emit("nickname", username);
+    socket.emit('nickname', username);
 
-    socket.emit("enter_room", { roomName }, done);
+    socket.emit('enter_room', { roomName }, done);
 
     // Running Peer A
-    socket.on("welcome", async (joinUsername, done) => {
+    socket.on('welcome', async (joinUsername, done) => {
       const offer = await myPeerConnection.createOffer();
       await myPeerConnection.setLocalDescription(offer);
-      await socket.emit("offer", offer, roomName);
+      await socket.emit('offer', offer, roomName);
       setMessages((currentMsg) => [
         ...currentMsg,
-        { author: "SYSTEM", message: `${joinUsername} joined!` },
+        { author: 'SYSTEM', message: `${joinUsername} joined!` },
       ]);
     });
 
     // Running Peer B
-    socket.on("offer", async (offer) => {
+    socket.on('offer', async (offer) => {
       myPeerConnection.setRemoteDescription(offer);
       const answer = await myPeerConnection.createAnswer();
       myPeerConnection.setLocalDescription(answer);
-      socket.emit("answer", answer, roomName);
+      socket.emit('answer', answer, roomName);
     });
 
     // Running Peer A
-    socket.on("answer", (answer) => {
+    socket.on('answer', (answer) => {
       myPeerConnection.setRemoteDescription(answer);
     });
 
-    socket.on("ice", (ice) => {
+    socket.on('ice', (ice) => {
       myPeerConnection.addIceCandidate(ice);
     });
 
-    socket.on("bye", (leftUsername) => {
+    socket.on('bye', (leftUsername) => {
       setMessages((currentMsg) => [
         ...currentMsg,
-        { author: "SYSTEM", message: `${leftUsername} left ㅠㅠ` },
+        { author: 'SYSTEM', message: `${leftUsername} left ㅠㅠ` },
       ]);
       peersVideoRef.current.srcObject = null;
     });
 
-    socket.on("new_Message", (msg, name) => {
+    socket.on('new_Message', (msg, name) => {
       setMessages((currentMsg) => [
         ...currentMsg,
         { author: name, message: msg },
@@ -121,14 +139,14 @@ export default function Room() {
     });
   };
   const onValid = ({ message }) => {
-    socket.emit("createdMessage", { message, roomName });
-    setMessages((currentMsg) => [...currentMsg, { author: "Me", message }]);
+    socket.emit('createdMessage', { message, roomName });
+    setMessages((currentMsg) => [...currentMsg, { author: 'Me', message }]);
     reset();
   };
   const getCameras = async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const cameras = devices.filter((device) => device.kind === "videoinput");
+      const cameras = devices.filter((device) => device.kind === 'videoinput');
       cameras.map((camera) => {
         setCameraOptions([
           ...cameraOptions,
@@ -156,58 +174,64 @@ export default function Room() {
   };
   const cameraChange = async (value) => {};
   return (
-    <div className="flex items-center p-4 mx-auto min-h-screen justify-center bg-purple-500">
+    <div className="flex items-center p-16 mx-auto h-screen justify-center bg-purple-500">
       <main className="gap-4 flex flex-col items-center justify-center w-full h-full">
         <p className="font-bold text-white text-xl">Room: {roomName}</p>
         <p className="font-bold text-white text-xl">
           Your username: {username}
         </p>
-        <div className="flex flex-col justify-end bg-white h-[20rem] min-w-[33%] rounded-md shadow-md ">
-          <div className="h-full last:border-b-0 overflow-y-scroll">
-            {messages.map((msg, i) => {
-              return (
-                <div
-                  className={cls(
-                    "w-full py-1 px-2 border-b border-gray-200",
-                    msg.author === "SYSTEM" ? "text-red-500" : ""
-                  )}
-                  key={i}
-                >
-                  {msg.author} : {msg.message}
-                </div>
-              );
-            })}
-          </div>
-          <form
-            onSubmit={handleSubmit(onValid)}
-            className="border-t border-gray-300 w-full flex rounded-bl-md"
-          >
-            <input
-              {...register("message", { required: true })}
-              type="text"
-              placeholder="New message..."
-              className="outline-none py-2 px-2 rounded-bl-md flex-1"
-            />
-            <div className="border-l border-gray-300 flex justify-center items-center  rounded-br-md group hover:bg-purple-500 transition-all">
-              <button className="group-hover:text-white px-3 h-full">
-                Send
-              </button>
+        <div className="flex w-full h-full">
+          <div className="flex flex-col items-start bg-white w-96 rounded-md shadow-md ">
+            <div className="h-full last:border-b-0 overflow-y-scroll">
+              {messages.map((msg, i) => {
+                return (
+                  <div
+                    className={cls(
+                      'w-full py-1 px-2 border-b border-gray-200',
+                      msg.author === 'SYSTEM' ? 'text-red-500' : ''
+                    )}
+                    key={i}
+                  >
+                    {msg.author} : {msg.message}
+                  </div>
+                );
+              })}
             </div>
-          </form>
+            <form
+              onSubmit={handleSubmit(onValid)}
+              className="border-t border-gray-300 w-full flex rounded-bl-md"
+            >
+              <input
+                {...register('message', { required: true })}
+                type="text"
+                placeholder="New message..."
+                className="outline-none py-2 px-2 rounded-bl-md flex-1"
+              />
+              <div className="border-l border-gray-300 flex justify-center items-center  rounded-br-md group hover:bg-purple-500 transition-all">
+                <button className="group-hover:text-white px-3 h-full">
+                  Send
+                </button>
+              </div>
+            </form>
+          </div>
+          <div className="w-full flex justify-center items-center relative">
+            <div className="absolute top-10">{time}</div>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="w-[40%]"
+            ></video>
+            <video
+              ref={peersVideoRef}
+              autoPlay
+              playsInline
+              className="w-[40%] ml-4"
+            ></video>
+          </div>
         </div>
+        <button onClick={() => startStudy()}>Start</button>
         <div>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            className="w-56 bg-slate-500"
-          ></video>
-          <video
-            ref={peersVideoRef}
-            autoPlay
-            playsInline
-            className="w-56 bg-slate-500"
-          ></video>
           <select onChange={cameraChange}>
             {cameraOptions ? (
               cameraOptions.map((camera, i) => (
@@ -223,7 +247,7 @@ export default function Room() {
             onClick={videoControl}
             className="p-2 border-white border-2 rounded-xl cursor-pointer hover:scale-110 mt-3"
           >
-            {toggleVideo ? "Turn off" : "Turn on"}
+            {toggleVideo ? 'Turn off' : 'Turn on'}
           </button>
         </div>
       </main>

@@ -1,25 +1,20 @@
-import "../styles/globals.css";
-import Head from "next/head";
-import { AppProps } from "next/app";
-import { SWRConfig } from "swr";
-import useUser from "@libs/client/useUser";
-import { useRouter } from "next/router";
-import { useEffect } from "react";
-import Script from "next/script";
+import '../styles/globals.css';
+import Head from 'next/head';
+import { AppProps } from 'next/app';
+import { SWRConfig } from 'swr';
+import useUser from '@libs/client/useUser';
+import { useRouter } from 'next/router';
+import { useEffect } from 'react';
+import Script from 'next/script';
 
 function MyApp({ Component, pageProps }: AppProps) {
   const { user } = useUser();
   const router = useRouter();
   useEffect(() => {
     if (!user) return;
-    if (router.pathname === "/enter" || router.pathname === "/signup") {
-      if (user) {
-        router.push("/");
-      }
-    } else {
-      if (!user) {
-        router.push("/enter");
-      }
+    if (!user && router.pathname !== '/signup') {
+      router.push('/login');
+      return;
     }
   }, [user]);
   return (
