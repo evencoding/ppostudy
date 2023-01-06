@@ -10,13 +10,15 @@ import Script from 'next/script';
 function MyApp({ Component, pageProps }: AppProps) {
   const { user } = useUser();
   const router = useRouter();
+
   useEffect(() => {
-    if (!user) return;
+    if (!router || !user) return;
     if (!user && router.pathname !== '/signup') {
       router.push('/login');
       return;
     }
-  }, [user]);
+  }, [user, router]);
+
   return (
     <>
       <Script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></Script>
@@ -26,8 +28,7 @@ function MyApp({ Component, pageProps }: AppProps) {
       </Head>
       <SWRConfig
         value={{
-          fetcher: (url: string) =>
-            fetch(url).then((response) => response.json()),
+          fetcher: (url: string) => fetch(url).then((response) => response.json()),
         }}
       >
         <Component {...pageProps} />
